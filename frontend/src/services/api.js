@@ -1,6 +1,8 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+// VITE_API_URL: full backend URL for production (e.g. https://api.finlearn.stei.cloud)
+// Leave empty in dev — Vite proxy forwards /api/* to localhost:3000
+const API_BASE_URL = import.meta.env.VITE_API_URL || ''
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -35,20 +37,27 @@ function writeLocalScore(scorePayload) {
 export async function getCurrencyRates() {
   try {
     const response = await api.get('/api/currency/rates')
-    return {
-      ...response.data,
-      source: 'backend',
-    }
+    // Backend returns { fiat: { IDR, SGD, MYR, JPY }, crypto: { bitcoin, ethereum }, updated_at }
+    return { ...response.data, source: 'backend' }
   } catch (backendError) {
-    console.warn('Backend currency endpoint unavailable. Using public fallback API.', backendError)
+    console.warn('Backend currency endpoint unavailable. Using CoinGecko fallback.', backendError)
 
-    const response = await axios.get('https://open.er-api.com/v6/latest/USD', {
-      timeout: 10000,
-    })
+    // Same CoinGecko endpoint the backend uses — usd-coin is realtime USD proxy
+    const fallbackUrl = import.meta.env.VITE_EXCHANGE_API_URL
+    const response = await axios.get(fallbackUrl, { timeout: 10000 })
+    const data = response.data
 
     return {
-      base: response.data.base_code || 'USD',
-      rates: response.data.rates || {},
+      fiat: {
+        IDR: data['usd-coin']?.idr,
+        SGD: data['usd-coin']?.sgd,
+        MYR: data['usd-coin']?.myr,
+        JPY: data['usd-coin']?.jpy,
+      },
+      crypto: data.bitcoin ? {
+        bitcoin:  { usd: data.bitcoin.usd,  idr: data.bitcoin.idr  },
+        ethereum: { usd: data.ethereum.usd, idr: data.ethereum.idr },
+      } : null,
       updated_at: new Date().toISOString(),
       source: 'fallback-public-api',
     }
@@ -76,7 +85,8 @@ export async function submitQuizScore(scorePayload) {
 
 export async function getLeaderboard(topic = 'all') {
   try {
-    const endpoint = topic === 'all' ? '/api/quiz/leaderboard' : `/api/quiz/leaderboard/${topic}`
+    // Backend uses query param: GET /api/quiz/leaderboard?topic=budgeting
+    const endpoint = topic === 'all' ? '/api/quiz/leaderboard' : `/api/quiz/leaderboard?topic=${topic}`
     const response = await api.get(endpoint)
 
     return {
