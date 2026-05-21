@@ -13,8 +13,15 @@ function Navbar() {
     <header className="sticky top-0 z-50 border-b border-fin-line bg-fin-mist/95 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
         <Link to="/" className="flex min-w-0 items-center gap-3 transition hover:opacity-90">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-fin-ink text-sm font-extrabold text-white shadow-soft ring-1 ring-white/50">
-            FL
+          <div
+            className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl shadow-soft"
+            style={{ background: 'linear-gradient(140deg, #34653B 10%, #142D3D 88%)' }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: 22, height: 22 }}>
+              <polyline points="3,17 8,11 13,14 21,5" stroke="#A9C6AB" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              <polyline points="17,5 21,5 21,9" stroke="#A9C6AB" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              <line x1="3" y1="19.5" x2="21" y2="19.5" stroke="#6FA874" strokeWidth="1.2" strokeLinecap="round" opacity="0.55" />
+            </svg>
           </div>
           <div className="min-w-0">
             <p className="truncate text-lg font-extrabold tracking-tight text-fin-ink">FinLearn</p>

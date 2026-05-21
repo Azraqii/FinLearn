@@ -63,7 +63,10 @@ function Home() {
 
           <div className="mt-10 grid max-w-2xl gap-3 sm:grid-cols-3">
             {trustPoints.map((item) => (
-              <div key={item} className="rounded-xl border border-fin-line bg-white/65 px-4 py-3 text-sm font-bold text-fin-text">
+              <div key={item} className="flex items-center gap-2.5 rounded-xl border border-fin-line bg-white/65 px-4 py-3 text-sm font-bold text-fin-text">
+                <svg viewBox="0 0 16 16" fill="none" className="h-4 w-4 shrink-0 text-fin-forest">
+                  <path d="M3 8.5L6.5 12L13 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
                 {item}
               </div>
             ))}
@@ -85,8 +88,12 @@ function Home() {
 
           <div className="rounded-2xl border border-fin-sage bg-fin-sageSoft p-5 shadow-sm">
             <div className="flex items-start gap-4">
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-fin-forest text-sm font-extrabold text-white">
-                i
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-fin-forest">
+                <svg viewBox="0 0 20 20" fill="none" className="h-5 w-5 text-white">
+                  <circle cx="10" cy="10" r="8.25" stroke="currentColor" strokeWidth="1.75" />
+                  <path d="M10 9v5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <circle cx="10" cy="6.5" r="1" fill="currentColor" />
+                </svg>
               </div>
               <div>
                 <p className="text-sm font-extrabold text-fin-ink">Belajar tanpa hambatan</p>
@@ -119,7 +126,7 @@ function Home() {
           <div className="grid gap-6 md:grid-cols-3">
             {featureCards.map((feature) => (
               <div key={feature.title} className="rounded-2xl border border-fin-line bg-white p-6 shadow-soft transition hover:-translate-y-1 hover:border-fin-sage">
-                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-fin-mist text-sm font-extrabold text-fin-forest ring-1 ring-fin-line">
+                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-fin-sageSoft text-sm font-extrabold text-fin-forest ring-1 ring-fin-sage/50">
                   {feature.eyebrow}
                 </div>
                 <h3 className="text-lg font-extrabold text-fin-ink">{feature.title}</h3>
