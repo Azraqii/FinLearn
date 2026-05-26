@@ -28,6 +28,7 @@ function QuizResult() {
       try {
         const response = await submitQuizScore({
           name: result.name,
+          email: result.email,
           topic: result.topic,
           score: result.score,
         })

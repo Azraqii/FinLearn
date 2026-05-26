@@ -1,4 +1,5 @@
 import { NavLink, Link } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 const navItems = [
   { to: '/', label: 'Beranda' },
@@ -9,6 +10,8 @@ const navItems = [
 ]
 
 function Navbar() {
+  const { isAuthenticated, user, dashboardPath, logout } = useAuth()
+
   return (
     <header className="sticky top-0 z-50 border-b border-fin-line bg-fin-mist/95 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
@@ -48,12 +51,32 @@ function Navbar() {
           ))}
         </nav>
 
-        <Link
-          to="/quiz"
-          className="hidden rounded-xl bg-fin-ink px-4 py-2.5 text-sm font-bold text-white shadow-soft transition hover:-translate-y-0.5 hover:bg-fin-inkSoft focus:outline-none focus:ring-2 focus:ring-fin-forest focus:ring-offset-2 focus:ring-offset-fin-mist sm:inline-flex"
-        >
-          Ikut Kuis
-        </Link>
+        <div className="hidden items-center gap-2 sm:flex">
+          {isAuthenticated ? (
+            <>
+              <Link
+                to={dashboardPath}
+                className="rounded-xl bg-fin-ink px-4 py-2.5 text-sm font-bold text-white shadow-soft transition hover:-translate-y-0.5 hover:bg-fin-inkSoft focus:outline-none focus:ring-2 focus:ring-fin-forest focus:ring-offset-2 focus:ring-offset-fin-mist"
+              >
+                {user.role}
+              </Link>
+              <button
+                type="button"
+                onClick={logout}
+                className="rounded-xl border border-fin-sage bg-white px-4 py-2.5 text-sm font-bold text-fin-ink transition hover:bg-fin-shell"
+              >
+                Keluar
+              </button>
+            </>
+          ) : (
+            <Link
+              to="/login"
+              className="rounded-xl bg-fin-ink px-4 py-2.5 text-sm font-bold text-white shadow-soft transition hover:-translate-y-0.5 hover:bg-fin-inkSoft focus:outline-none focus:ring-2 focus:ring-fin-forest focus:ring-offset-2 focus:ring-offset-fin-mist"
+            >
+              Masuk
+            </Link>
+          )}
+        </div>
       </div>
 
       <nav aria-label="Navigasi mobile" className="flex gap-2 overflow-x-auto border-t border-fin-line bg-white/80 px-4 py-3 text-sm font-semibold text-fin-text md:hidden">
@@ -71,6 +94,15 @@ function Navbar() {
             {item.label}
           </NavLink>
         ))}
+        {isAuthenticated ? (
+          <NavLink to={dashboardPath} className="whitespace-nowrap rounded-lg px-3 py-2 hover:bg-fin-mist hover:text-fin-ink">
+            Dashboard
+          </NavLink>
+        ) : (
+          <NavLink to="/login" className="whitespace-nowrap rounded-lg px-3 py-2 hover:bg-fin-mist hover:text-fin-ink">
+            Masuk
+          </NavLink>
+        )}
       </nav>
     </header>
   )

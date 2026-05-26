@@ -17,6 +17,10 @@ export default defineConfig([
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      'react-refresh/only-export-components': ['error', {
+        allowConstantExport: true,
+        allowExportNames: ['useAuth', 'getDashboardPath'],
+      }],
       'no-unused-vars': 'off',
     },
     languageOptions: {
