@@ -1,16 +1,18 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import QuizQuestion from '../components/QuizQuestion'
+import { useAuth } from '../context/AuthContext'
 import { getArticleBySlug } from '../data/articles'
 import { getQuestionsByTopic } from '../data/questions'
 
 function QuizPlay() {
   const { topic } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const article = getArticleBySlug(topic)
   const questions = useMemo(() => getQuestionsByTopic(topic), [topic])
 
-  const [name, setName] = useState('')
+  const [name, setName] = useState(user?.role === 'student' ? user.name : '')
   const [hasStarted, setHasStarted] = useState(false)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState({})
@@ -65,6 +67,7 @@ function QuizPlay() {
     const score = Math.round((correctCount / questions.length) * 100)
     const result = {
       name: trimmedName,
+      email: user?.email || '',
       topic,
       topicTitle: article.title,
       score,
