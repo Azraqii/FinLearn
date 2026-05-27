@@ -1,8 +1,8 @@
 const axios = require('axios');
 
 // Single CoinGecko endpoint — usd-coin (USDC) serves as realtime USD proxy for fiat rates
-const COINGECKO_API_URL = process.env.COINGECKO_API_URL;
-if (!COINGECKO_API_URL) throw new Error('Missing env var: COINGECKO_API_URL');
+const COINGECKO_API_URL = process.env.COINGECKO_API_URL
+  || 'https://api.coingecko.com/api/v3/simple/price?ids=usd-coin,bitcoin,ethereum&vs_currencies=usd,idr,sgd,myr,jpy';
 
 // Single in-memory cache for all rate data
 const cache = { data: null, fetchedAt: null };

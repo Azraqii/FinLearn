@@ -1,6 +1,6 @@
 const pool = require('../db');
 
-const VALID_TOPICS = ['budgeting', 'inflasi', 'compound', 'aset-digital'];
+const VALID_TOPICS = ['budgeting', 'inflasi', 'compound', 'compound-interest', 'aset-digital'];
 
 // POST /api/quiz/submit
 async function submitQuiz(req, res) {
@@ -24,6 +24,12 @@ async function submitQuiz(req, res) {
       'INSERT INTO quiz_scores (name, topic, score) VALUES (?, ?, ?)',
       [name.trim(), topic, numericScore]
     );
+    if (req.user) {
+      await pool.execute(
+        'INSERT INTO quiz_attempts (user_id, name, topic, score) VALUES (?, ?, ?, ?)',
+        [req.user.id, name.trim(), topic, numericScore]
+      );
+    }
     return res.status(201).json({ success: true, id: result.insertId });
   } catch (err) {
     console.error('[quizController.submitQuiz]', err);
