@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getArticleBySlug } from '../data/articles'
+import { getMaterial } from '../services/api'
 
 function formatSourceName(name) {
   return name
@@ -8,9 +9,58 @@ function formatSourceName(name) {
 
 function Article() {
   const { topic } = useParams()
-  const article = getArticleBySlug(topic)
+  const staticArticle = getArticleBySlug(topic)
+  const [backendArticle, setBackendArticle] = useState(null)
+  const [isLoading, setIsLoading] = useState(!staticArticle)
   const articleRef = useRef(null)
   const [progress, setProgress] = useState(0)
+  const article = staticArticle || backendArticle
+
+  useEffect(() => {
+    let active = true
+    setBackendArticle(null)
+
+    if (staticArticle) {
+      setIsLoading(false)
+      return () => {
+        active = false
+      }
+    }
+
+    setIsLoading(true)
+    getMaterial(topic)
+      .then((result) => {
+        if (!active) return
+        const material = result.data
+        setBackendArticle({
+          slug: material.slug || String(material.id),
+          title: material.title,
+          summary: material.summary || `Materi ${material.topic || 'FinLearn'} dari mentor ${material.author || 'FinLearn'}.`,
+          readingTime: 'Materi mentor',
+          sections: [
+            {
+              heading: material.topic ? `Topik ${material.topic}` : 'Materi',
+              paragraphs: String(material.content || '')
+                .split(/\n+/)
+                .map((paragraph) => paragraph.trim())
+                .filter(Boolean),
+            },
+          ],
+          tips: [],
+          sources: [],
+        })
+      })
+      .catch(() => {
+        if (active) setBackendArticle(null)
+      })
+      .finally(() => {
+        if (active) setIsLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [staticArticle, topic])
 
   useEffect(() => {
     function updateProgress() {
@@ -35,6 +85,17 @@ function Article() {
       window.removeEventListener('resize', updateProgress)
     }
   }, [topic])
+
+  if (isLoading) {
+    return (
+      <main className="min-h-screen bg-fin-mist px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl rounded-3xl border border-fin-line bg-white p-8 text-center shadow-soft">
+          <h1 className="text-3xl font-extrabold text-fin-ink">Memuat materi...</h1>
+          <p className="mt-4 text-base leading-7 text-fin-text">FinLearn sedang mengambil materi dari backend.</p>
+        </div>
+      </main>
+    )
+  }
 
   if (!article) {
     return (
@@ -116,6 +177,7 @@ function Article() {
 
             <section className="mt-12 rounded-2xl border border-fin-sage bg-fin-sageSoft p-6 sm:p-7">
               <h2 className="text-xl font-extrabold text-fin-ink">Tips praktis</h2>
+              {article.tips.length > 0 ? (
               <ul className="mt-5 grid gap-3">
                 {article.tips.map((tip) => (
                   <li key={tip} className="flex gap-3 text-sm font-semibold leading-6 text-fin-body sm:text-base">
@@ -124,8 +186,14 @@ function Article() {
                   </li>
                 ))}
               </ul>
+              ) : (
+                <p className="mt-4 text-sm font-semibold leading-6 text-fin-body">
+                  Catat inti materi ini, lalu coba hubungkan dengan kebiasaan finansial harianmu.
+                </p>
+              )}
             </section>
 
+            {article.sources.length > 0 && (
             <section className="mt-8 rounded-2xl border border-fin-line bg-fin-shell p-6 sm:p-7">
               <h2 className="text-xl font-extrabold text-fin-ink">Sumber bacaan</h2>
               <div className="mt-5 grid gap-3">
@@ -142,6 +210,7 @@ function Article() {
                 ))}
               </div>
             </section>
+            )}
 
             <div className="mt-10 flex flex-col gap-3 sm:flex-row">
               <Link

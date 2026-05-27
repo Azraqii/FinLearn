@@ -22,6 +22,7 @@ function MentorDashboard() {
   const [challengeForm, setChallengeForm] = useState({ title: '', description: '', dueDate: '', attachmentFile: null, status: 'published' })
   const [feedbackDrafts, setFeedbackDrafts] = useState({})
   const [status, setStatus] = useState('')
+  const [statusTone, setStatusTone] = useState('success')
 
   async function loadData() {
     const [materialsResult, challengesResult, submissionsResult] = await Promise.all([
@@ -40,17 +41,29 @@ function MentorDashboard() {
 
   async function handleMaterialSubmit(event) {
     event.preventDefault()
-    const result = await saveMaterial({
-      ...materialForm,
-      author: user.name,
-    })
+    if (materialForm.content.trim().length < 20) {
+      setStatusTone('error')
+      setStatus('Konten materi minimal 20 karakter agar bisa disimpan.')
+      return
+    }
 
-    setMaterials((current) => {
-      const exists = current.some((item) => item.id === result.data.id)
-      return exists ? current.map((item) => (item.id === result.data.id ? result.data : item)) : [result.data, ...current]
-    })
-    setMaterialForm(emptyMaterial)
-    setStatus('Materi berhasil disimpan.')
+    try {
+      const result = await saveMaterial({
+        ...materialForm,
+        author: user.name,
+      })
+
+      setMaterials((current) => {
+        const exists = current.some((item) => item.id === result.data.id)
+        return exists ? current.map((item) => (item.id === result.data.id ? result.data : item)) : [result.data, ...current]
+      })
+      setMaterialForm(emptyMaterial)
+      setStatusTone('success')
+      setStatus('Materi berhasil disimpan ke database.')
+    } catch (error) {
+      setStatusTone('error')
+      setStatus(error.message || 'Materi gagal disimpan.')
+    }
   }
 
   async function handleChallengeSubmit(event) {
@@ -87,7 +100,11 @@ function MentorDashboard() {
           <p className="mt-4 max-w-3xl text-base font-medium leading-8 text-fin-text">
             Buat materi, upload thumbnail atau gambar pendukung, buat challenge, tinjau submission student, dan berikan feedback.
           </p>
-          {status && <p className="mt-4 text-sm font-bold text-fin-forest" aria-live="polite">{status}</p>}
+          {status && (
+            <p className={`mt-4 rounded-xl px-4 py-3 text-sm font-bold ${statusTone === 'error' ? 'border border-red-200 bg-red-50 text-red-700' : 'text-fin-forest'}`} aria-live="polite">
+              {status}
+            </p>
+          )}
         </section>
 
         <div className="mb-8 grid gap-4 md:grid-cols-3">
@@ -150,9 +167,14 @@ function MentorDashboard() {
                   value={materialForm.content}
                   onChange={(event) => setMaterialForm((current) => ({ ...current, content: event.target.value }))}
                   rows="5"
+                  minLength={20}
+                  aria-describedby="material-content-help"
                   className="mt-3 w-full rounded-xl border border-fin-line bg-fin-shell px-4 py-3 text-sm font-semibold text-fin-ink outline-none focus:border-fin-forest focus:ring-2 focus:ring-fin-sage"
                   required
                 />
+                <span id="material-content-help" className={`mt-2 block text-xs font-bold ${materialForm.content.trim().length > 0 && materialForm.content.trim().length < 20 ? 'text-red-700' : 'text-fin-muted'}`}>
+                  Minimal 20 karakter. Saat ini {materialForm.content.trim().length}/20.
+                </span>
               </label>
               <label className="block">
                 <span className="text-sm font-extrabold uppercase tracking-[0.14em] text-fin-text">Thumbnail atau gambar</span>

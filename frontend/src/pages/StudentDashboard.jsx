@@ -99,7 +99,11 @@ function StudentDashboard() {
 
             <div className="grid gap-4">
               {materials.map((material) => (
-                <article key={material.id} className="rounded-2xl border border-fin-line bg-fin-shell p-5">
+                <Link
+                  key={material.id}
+                  to={`/learn/${material.slug || material.id}`}
+                  className="rounded-2xl border border-fin-line bg-fin-shell p-5 transition hover:-translate-y-0.5 hover:border-fin-sage hover:bg-white hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-fin-forest"
+                >
                   <div className="flex gap-4">
                     <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl bg-fin-ink text-sm font-extrabold text-white">
                       {material.title.slice(0, 2).toUpperCase()}
@@ -108,9 +112,10 @@ function StudentDashboard() {
                       <h3 className="font-extrabold text-fin-ink">{material.title}</h3>
                       <p className="mt-2 text-sm leading-6 text-fin-text">{material.summary}</p>
                       <p className="mt-3 text-xs font-bold text-fin-muted">Mentor: {material.author || 'FinLearn'}</p>
+                      <p className="mt-3 text-sm font-extrabold text-fin-forest">Buka materi -&gt;</p>
                     </div>
                   </div>
-                </article>
+                </Link>
               ))}
             </div>
           </section>

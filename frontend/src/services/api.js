@@ -356,6 +356,22 @@ export async function getMaterials() {
   }
 }
 
+export async function getMaterial(idOrSlug) {
+  try {
+    const response = await api.get(`/api/materials/${idOrSlug}`)
+    return { data: normalizeMaterial(response.data), source: 'backend' }
+  } catch (error) {
+    if (!shouldUseLocalFallback(error)) {
+      throw new Error(apiErrorMessage(error, 'Gagal mengambil materi.'))
+    }
+    const material = ensureLocalMaterials()
+      .map(normalizeMaterial)
+      .find((item) => String(item.slug || item.id) === String(idOrSlug))
+    if (!material) throw new Error('Materi tidak ditemukan.')
+    return { data: material, source: 'local-demo' }
+  }
+}
+
 export async function saveMaterial(payload) {
   try {
     const backendPayload = {
@@ -379,6 +395,9 @@ export async function saveMaterial(payload) {
       source: 'backend',
     }
   } catch (error) {
+    if (!shouldUseLocalFallback(error)) {
+      throw new Error(apiErrorMessage(error, 'Gagal menyimpan materi.'))
+    }
     console.warn('Backend material save unavailable. Saving local material.', error)
     const materials = ensureLocalMaterials()
     const { thumbnailFile, ...localPayload } = payload
