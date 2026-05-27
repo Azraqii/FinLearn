@@ -91,10 +91,10 @@ function StudentDashboard() {
           <section className="rounded-3xl border border-fin-line bg-white p-6 shadow-panel">
             <div className="mb-5 flex items-end justify-between gap-4">
               <div>
-                <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-fin-forest">Materi backend</p>
+                <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-fin-forest">Materi belajar</p>
                 <h2 className="mt-2 text-2xl font-extrabold text-fin-ink">Materi terbaru</h2>
               </div>
-              <Link to="/learn" className="text-sm font-extrabold text-fin-forest hover:text-fin-ink">Materi lokal</Link>
+              <Link to="/learn" className="text-sm font-extrabold text-fin-forest hover:text-fin-ink">Lihat semua topik</Link>
             </div>
 
             <div className="grid gap-4">

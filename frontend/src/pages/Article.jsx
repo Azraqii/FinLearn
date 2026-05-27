@@ -15,6 +15,7 @@ function Article() {
   const articleRef = useRef(null)
   const [progress, setProgress] = useState(0)
   const article = staticArticle || backendArticle
+  const hasQuiz = Boolean(staticArticle)
 
   useEffect(() => {
     let active = true
@@ -91,7 +92,7 @@ function Article() {
       <main className="min-h-screen bg-fin-mist px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl rounded-3xl border border-fin-line bg-white p-8 text-center shadow-soft">
           <h1 className="text-3xl font-extrabold text-fin-ink">Memuat materi...</h1>
-          <p className="mt-4 text-base leading-7 text-fin-text">FinLearn sedang mengambil materi dari backend.</p>
+          <p className="mt-4 text-base leading-7 text-fin-text">FinLearn sedang menyiapkan materi untukmu.</p>
         </div>
       </main>
     )
@@ -152,7 +153,7 @@ function Article() {
                   {article.readingTime}
                 </span>
                 <span className="rounded-full bg-fin-ink px-3 py-1 text-xs font-extrabold text-white">
-                  Materi FinLearn
+                  {hasQuiz ? 'Materi utama' : 'Materi mentor'}
                 </span>
               </div>
               <h1 className="mt-5 text-3xl font-extrabold tracking-tight text-fin-ink sm:text-5xl sm:leading-tight">
@@ -215,7 +216,7 @@ function Article() {
             <div className="mt-10 flex flex-col gap-3 sm:flex-row">
               <Link
                 to={`/quiz?topic=${article.slug}`}
-                className="inline-flex items-center justify-center rounded-xl bg-fin-forest px-6 py-3.5 text-sm font-extrabold text-white shadow-lift transition hover:-translate-y-0.5 hover:bg-fin-forestDark"
+                className={`${hasQuiz ? 'inline-flex' : 'hidden'} items-center justify-center rounded-xl bg-fin-forest px-6 py-3.5 text-sm font-extrabold text-white shadow-lift transition hover:-translate-y-0.5 hover:bg-fin-forestDark`}
               >
                 Ikut Kuis Topik Ini
               </Link>
