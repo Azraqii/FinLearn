@@ -2,21 +2,28 @@
 
 ## Overview
 Backend FinLearn dibangun dengan Node.js + Express.js.
-Menyediakan REST API untuk kuis, leaderboard, dan data kurs mata uang.
+Menyediakan REST API untuk auth/role, approval admin, materi, challenge, submission,
+kuis, leaderboard, upload file, dan data kurs mata uang.
 Database menggunakan MySQL yang di-host sendiri via aaPanel.
 
 ## Stack
 - **Runtime**: Node.js (v22+)
 - **Framework**: Express.js
 - **Database**: MySQL via `mysql2`
-- **External API**: ExchangeRate-API (https://www.exchangerate-api.com/)
-- **Utilities**: dotenv, cors, axios, nodemon (dev)
+- **External API**: CoinGecko API
+- **Utilities**: dotenv, cors, axios, bcryptjs, jsonwebtoken, multer, nodemon (dev)
 
 ## Folder Structure
 ```
 backend/
 ├── src/
 │   ├── routes/
+│   │   ├── auth.js          # register/login/me
+│   │   ├── admin.js         # approval user
+│   │   ├── materials.js     # materi mentor
+│   │   ├── challenges.js    # challenge mentor dan submit student
+│   │   ├── submissions.js   # feedback submission
+│   │   ├── uploads.js       # upload file non-teks
 │   │   ├── quiz.js          # POST /api/quiz/submit, GET /api/quiz/leaderboard
 │   │   └── currency.js      # GET /api/currency/rates
 │   ├── controllers/
@@ -34,6 +41,22 @@ backend/
 | Method | Endpoint                  | Deskripsi                              |
 |--------|---------------------------|----------------------------------------|
 | GET    | /api/health               | Health check                           |
+| POST   | /api/auth/register        | Registrasi user; user pertama jadi superadmin |
+| POST   | /api/auth/login           | Login dan ambil JWT                    |
+| GET    | /api/auth/me              | Profil user login                      |
+| GET    | /api/admin/users          | Superadmin melihat user                |
+| PATCH  | /api/admin/users/:id/status | Superadmin approve/reject user       |
+| GET    | /api/materials            | Daftar materi                          |
+| POST   | /api/materials            | Mentor/superadmin membuat materi      |
+| PATCH  | /api/materials/:id        | Mentor/superadmin mengubah materi     |
+| GET    | /api/challenges           | Daftar challenge                       |
+| POST   | /api/challenges           | Mentor/superadmin membuat challenge   |
+| PATCH  | /api/challenges/:id       | Mentor/superadmin mengubah challenge  |
+| POST   | /api/challenges/:id/submissions | Student submit challenge       |
+| GET    | /api/challenges/:id/submissions | Mentor melihat submission       |
+| GET    | /api/submissions/mine     | Student melihat feedback submission   |
+| PATCH  | /api/submissions/:id/feedback | Mentor memberi feedback          |
+| POST   | /api/uploads              | Upload gambar/gif/pdf                 |
 | POST   | /api/quiz/submit          | Simpan hasil kuis ke DB                |
 | GET    | /api/quiz/leaderboard     | Ambil top 10 skor dari DB              |
 | GET    | /api/currency/rates       | Kurs USD/IDR real-time (cache 1 jam)   |
@@ -52,40 +75,32 @@ Response: { "base": "USD", "rates": { "IDR": 16300, "SGD": 1.34, ... }, "updated
 ```
 
 ## Database Schema
-```sql
--- schema.sql
-CREATE DATABASE IF NOT EXISTS finlearn;
-USE finlearn;
-
-CREATE TABLE IF NOT EXISTS quiz_scores (
-  id          INT AUTO_INCREMENT PRIMARY KEY,
-  name        VARCHAR(100) NOT NULL,
-  topic       VARCHAR(50)  NOT NULL,
-  score       INT          NOT NULL,
-  created_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
-);
-```
+Tabel utama MS2: `users`, `materials`, `quiz_scores`, `quiz_attempts`,
+`challenges`, dan `challenge_submissions`. Lihat `schema.sql` untuk DDL lengkap.
 Jalankan `schema.sql` ini di phpMyAdmin (via aaPanel) atau lewat MySQL CLI.
 
 ## Environment Variables
 ```
 # backend/.env.example
 PORT=3000
+JWT_SECRET=change_this_to_a_long_random_secret
+JWT_EXPIRES_IN=7d
+UPLOAD_DIR=./uploads
 DB_HOST=localhost
 DB_PORT=3306
 DB_USER=root
 DB_PASSWORD=your_mysql_password
 DB_NAME=finlearn
-EXCHANGE_API_KEY=your_exchangerate_api_key
-EXCHANGE_API_URL=https://v6.exchangerate-api.com/v6
+COINGECKO_API_URL=https://api.coingecko.com/api/v3/simple/price?ids=usd-coin,bitcoin,ethereum&vs_currencies=usd,idr,sgd,myr,jpy
 ```
-Daftar API key gratis di https://www.exchangerate-api.com/ (1500 req/bulan).
 
 ## Dev Commands
 ```bash
 npm install
 npm run dev     # nodemon server.js — auto restart on change
 npm start       # node server.js — untuk production di aaPanel
+npm run seed    # apply schema.sql dan isi data demo MS2
+npm run test:endpoints # smoke test endpoint dengan mock DB lokal
 ```
 
 ## Deployment di aaPanel
@@ -108,7 +123,7 @@ app.use(cors({
 ## Notes untuk AI Agent
 - Gunakan connection pool (`mysql2/promise`), bukan single connection
 - Semua query pakai prepared statements, jangan string concatenation
-- Cache response ExchangeRate API di memori (simpan timestamp), jangan hit API setiap request
+- Cache response CoinGecko API di memori (simpan timestamp), jangan hit API setiap request
 - Validasi input di setiap endpoint sebelum query ke DB
 - Jangan expose stack trace di response error production
 - File `.env` tidak boleh di-commit, pastikan ada di `.gitignore`
