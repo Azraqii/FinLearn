@@ -46,6 +46,7 @@ backend/
 | GET    | /api/auth/me              | Profil user login                      |
 | GET    | /api/admin/users          | Superadmin melihat user                |
 | PATCH  | /api/admin/users/:id/status | Superadmin approve/reject user       |
+| PATCH  | /api/admin/users/:id/role | Superadmin mengubah role user         |
 | GET    | /api/materials            | Daftar materi                          |
 | POST   | /api/materials            | Mentor/superadmin membuat materi      |
 | PATCH  | /api/materials/:id        | Mentor/superadmin mengubah materi     |

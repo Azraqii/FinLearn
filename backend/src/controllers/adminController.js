@@ -1,6 +1,7 @@
 const pool = require('../db');
 
 const VALID_STATUSES = new Set(['pending', 'approved', 'rejected']);
+const VALID_ROLES = new Set(['superadmin', 'mentor', 'student']);
 
 async function listUsers(req, res) {
   const { status } = req.query;
@@ -50,4 +51,33 @@ async function updateUserStatus(req, res) {
   }
 }
 
-module.exports = { listUsers, updateUserStatus };
+async function updateUserRole(req, res) {
+  const userId = Number(req.params.id);
+  const { role } = req.body;
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return res.status(400).json({ error: 'invalid user id' });
+  }
+  if (!VALID_ROLES.has(role)) {
+    return res.status(400).json({ error: 'role must be superadmin, mentor, or student' });
+  }
+  if (userId === req.user.id && role !== 'superadmin') {
+    return res.status(400).json({ error: 'superadmin cannot remove their own superadmin role' });
+  }
+
+  try {
+    const [result] = await pool.execute('UPDATE users SET role = ? WHERE id = ?', [role, userId]);
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'User not found' });
+
+    const [[user]] = await pool.execute(
+      'SELECT id, name, email, role, status, created_at FROM users WHERE id = ?',
+      [userId]
+    );
+    return res.json(user);
+  } catch (err) {
+    console.error('[adminController.updateUserRole]', err);
+    return res.status(500).json({ error: 'Failed to update user role' });
+  }
+}
+
+module.exports = { listUsers, updateUserStatus, updateUserRole };

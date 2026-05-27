@@ -12,6 +12,7 @@ function StudentDashboard() {
   const [activeChallenge, setActiveChallenge] = useState('')
   const [submissionText, setSubmissionText] = useState('')
   const [fileName, setFileName] = useState('')
+  const [attachmentFile, setAttachmentFile] = useState(null)
   const [status, setStatus] = useState('')
 
   useEffect(() => {
@@ -24,7 +25,9 @@ function StudentDashboard() {
       ])
       setMaterials(materialsResult.data)
       setChallenges(challengesResult.data)
-      setSubmissions(submissionsResult.data.filter((item) => item.studentEmail === user.email))
+      setSubmissions(submissionsResult.data.filter((item) => (
+        !item.studentEmail || item.studentEmail === user.email
+      )))
       setScores(scoresResult.data.filter((score) => score.name === user.name || score.email === user.email))
       setActiveChallenge(challengesResult.data[0]?.id || '')
     }
@@ -48,11 +51,13 @@ function StudentDashboard() {
       studentEmail: user.email,
       text: submissionText.trim(),
       fileName,
+      attachmentFile,
     })
 
     setSubmissions((current) => [result.data, ...current])
     setSubmissionText('')
     setFileName('')
+    setAttachmentFile(null)
     setStatus('Submission berhasil disimpan.')
   }
 
@@ -149,9 +154,15 @@ function StudentDashboard() {
                 <span className="text-sm font-extrabold uppercase tracking-[0.14em] text-fin-text">File pendukung</span>
                 <input
                   type="file"
-                  onChange={(event) => setFileName(event.target.files?.[0]?.name || '')}
+                  accept="image/png,image/jpeg,image/gif,image/webp,application/pdf"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] || null
+                    setAttachmentFile(file)
+                    setFileName(file?.name || '')
+                  }}
                   className="mt-3 w-full rounded-xl border border-fin-line bg-fin-shell px-4 py-3 text-sm font-semibold text-fin-text file:mr-4 file:rounded-lg file:border-0 file:bg-fin-forest file:px-4 file:py-2 file:font-bold file:text-white"
                 />
+                {fileName && <span className="mt-2 block text-xs font-bold text-fin-muted">{fileName}</span>}
               </label>
 
               {status && <p className="text-sm font-bold text-fin-forest" aria-live="polite">{status}</p>}

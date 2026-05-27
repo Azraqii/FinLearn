@@ -75,6 +75,14 @@ const mockPool = {
       return [{ affectedRows: 1 }];
     }
 
+    if (compact.startsWith('UPDATE users SET role = ? WHERE id = ?')) {
+      const [role, id] = params;
+      const user = users.find((entry) => entry.id === id);
+      if (!user) return [{ affectedRows: 0 }];
+      user.role = role;
+      return [{ affectedRows: 1 }];
+    }
+
     if (compact.startsWith('INSERT INTO materials')) {
       const [mentorId, title, slug, topic, summary, content, thumbnailPath, status] = params;
       const material = {
@@ -266,6 +274,10 @@ async function main() {
 
     await request(baseUrl, 'PATCH', `/api/admin/users/${mentorPending.user.id}/approve`, { token: admin.token });
     await request(baseUrl, 'PATCH', `/api/admin/users/${studentPending.user.id}/approve`, { token: admin.token });
+    await request(baseUrl, 'PATCH', `/api/admin/users/${studentPending.user.id}/role`, {
+      token: admin.token,
+      body: { role: 'student' },
+    });
     await request(baseUrl, 'GET', '/api/admin/users?status=approved', { token: admin.token });
 
     const mentor = await request(baseUrl, 'POST', '/api/auth/login', {

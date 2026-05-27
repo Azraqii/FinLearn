@@ -12,6 +12,7 @@ const LOCAL_USERS_KEY = 'finlearn-local-users'
 const LOCAL_MATERIALS_KEY = 'finlearn-local-materials'
 const LOCAL_CHALLENGES_KEY = 'finlearn-local-challenges'
 const LOCAL_SUBMISSIONS_KEY = 'finlearn-local-submissions'
+const AUTH_SESSION_KEY = 'finlearn-auth-session'
 
 const FRONTEND_TO_BACKEND_TOPIC = {
   'compound-interest': 'compound',
@@ -25,17 +26,17 @@ const defaultUsers = [
   {
     id: 'admin-demo',
     name: 'Admin FinLearn',
-    email: 'admin@finlearn.id',
-    password: 'password',
-    role: 'admin',
+    email: 'admin@finlearn.local',
+    password: 'Finlearn123!',
+    role: 'superadmin',
     status: 'approved',
     created_at: new Date().toISOString(),
   },
   {
     id: 'mentor-demo',
     name: 'Mentor FinLearn',
-    email: 'mentor@finlearn.id',
-    password: 'password',
+    email: 'mentor@finlearn.local',
+    password: 'Finlearn123!',
     role: 'mentor',
     status: 'approved',
     created_at: new Date().toISOString(),
@@ -43,8 +44,8 @@ const defaultUsers = [
   {
     id: 'student-demo',
     name: 'Student FinLearn',
-    email: 'student@finlearn.id',
-    password: 'password',
+    email: 'student@finlearn.local',
+    password: 'Finlearn123!',
     role: 'student',
     status: 'approved',
     created_at: new Date().toISOString(),
@@ -159,11 +160,92 @@ function readLocalSubmissions() {
   return readJson(LOCAL_SUBMISSIONS_KEY, [])
 }
 
+function readAuthSession() {
+  return readJson(AUTH_SESSION_KEY, null)
+}
+
+function currentUser() {
+  return readAuthSession()?.user || null
+}
+
+api.interceptors.request.use((config) => {
+  const token = readAuthSession()?.token
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+function apiErrorMessage(error, fallback) {
+  return error?.response?.data?.error || error?.response?.data?.message || error?.message || fallback
+}
+
+function shouldUseLocalFallback(error) {
+  return !error.response
+}
+
+function normalizeRole(role) {
+  return role === 'admin' ? 'superadmin' : role
+}
+
+function normalizeUser(user) {
+  return user ? { ...user, role: normalizeRole(user.role) } : user
+}
+
+function normalizeMaterial(material) {
+  return {
+    ...material,
+    author: material.author || material.mentor_name || 'FinLearn',
+    thumbnail: material.thumbnail || material.thumbnail_path || '',
+    created_at: material.created_at || new Date().toISOString(),
+  }
+}
+
+function normalizeChallenge(challenge) {
+  return {
+    ...challenge,
+    dueDate: challenge.dueDate || challenge.due_at || '',
+    mentorName: challenge.mentorName || challenge.mentor_name || 'Mentor FinLearn',
+    created_at: challenge.created_at || new Date().toISOString(),
+  }
+}
+
+function normalizeSubmission(submission) {
+  return {
+    ...submission,
+    challengeId: submission.challengeId || submission.challenge_id,
+    challengeTitle: submission.challengeTitle || submission.challenge_title || 'Challenge',
+    studentName: submission.studentName || submission.student_name || '',
+    studentEmail: submission.studentEmail || submission.student_email || '',
+    text: submission.text || submission.answer_text || '',
+    fileName: submission.fileName || submission.attachment_path || '',
+    feedback: submission.feedback || submission.feedback_text || '',
+    submitted_at: submission.submitted_at || submission.created_at || new Date().toISOString(),
+  }
+}
+
+function formDataFromObject(payload, fileFields = {}) {
+  const formData = new FormData()
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value === undefined || value === null || fileFields[key]) return
+    formData.append(key, value)
+  })
+  Object.entries(fileFields).forEach(([key, value]) => {
+    if (value instanceof File) formData.append(key, value)
+  })
+  return formData
+}
+
 export async function loginUser(credentials) {
   try {
     const response = await api.post('/api/auth/login', credentials)
-    return { user: response.data.user || response.data, source: 'backend' }
+    return {
+      user: normalizeUser(response.data.user || response.data),
+      token: response.data.token || null,
+      source: 'backend',
+    }
   } catch (error) {
+    if (!shouldUseLocalFallback(error)) {
+      throw new Error(apiErrorMessage(error, 'Login gagal. Coba lagi.'))
+    }
     console.warn('Backend login unavailable. Using local auth fallback.', error)
     const users = ensureLocalUsers()
     const user = users.find((item) => item.email === credentials.email && item.password === credentials.password)
@@ -176,15 +258,22 @@ export async function loginUser(credentials) {
       throw new Error('Akun kamu masih menunggu persetujuan admin.')
     }
 
-    return { user: publicUser(user), source: 'local-demo' }
+    return { user: normalizeUser(publicUser(user)), token: null, source: 'local-demo' }
   }
 }
 
 export async function registerUser(payload) {
   try {
     const response = await api.post('/api/auth/register', payload)
-    return { user: response.data.user || response.data, source: 'backend' }
+    return {
+      user: normalizeUser(response.data.user || response.data),
+      token: response.data.token || null,
+      source: 'backend',
+    }
   } catch (error) {
+    if (!shouldUseLocalFallback(error)) {
+      throw new Error(apiErrorMessage(error, 'Registrasi gagal. Coba lagi.'))
+    }
     console.warn('Backend register unavailable. Saving local pending user.', error)
     const users = ensureLocalUsers()
     const exists = users.some((user) => user.email === payload.email)
@@ -204,17 +293,18 @@ export async function registerUser(payload) {
     }
 
     writeJson(LOCAL_USERS_KEY, [newUser, ...users])
-    return { user: publicUser(newUser), source: 'local-demo' }
+    return { user: normalizeUser(publicUser(newUser)), token: null, source: 'local-demo' }
   }
 }
 
 export async function getUsers() {
   try {
     const response = await api.get('/api/admin/users')
-    return { data: response.data, source: 'backend' }
+    return { data: response.data.map(normalizeUser), source: 'backend' }
   } catch (error) {
+    if (!shouldUseLocalFallback(error)) throw new Error(apiErrorMessage(error, 'Gagal mengambil user.'))
     console.warn('Backend users unavailable. Reading local users.', error)
-    return { data: ensureLocalUsers().map(publicUser), source: 'local-demo' }
+    return { data: ensureLocalUsers().map(publicUser).map(normalizeUser), source: 'local-demo' }
   }
 }
 
@@ -229,52 +319,71 @@ export async function getPendingUsers() {
 export async function updateUserStatus(userId, status) {
   try {
     const response = await api.patch(`/api/admin/users/${userId}/status`, { status })
-    return { user: response.data.user || response.data, source: 'backend' }
+    return { user: normalizeUser(response.data.user || response.data), source: 'backend' }
   } catch (error) {
+    if (!shouldUseLocalFallback(error)) throw new Error(apiErrorMessage(error, 'Gagal mengubah status user.'))
     console.warn('Backend user status unavailable. Updating local user.', error)
     const users = ensureLocalUsers().map((user) => (
       user.id === userId ? { ...user, status } : user
     ))
     writeJson(LOCAL_USERS_KEY, users)
-    return { user: publicUser(users.find((user) => user.id === userId)), source: 'local-demo' }
+    return { user: normalizeUser(publicUser(users.find((user) => user.id === userId))), source: 'local-demo' }
   }
 }
 
 export async function updateUserRole(userId, role) {
   try {
     const response = await api.patch(`/api/admin/users/${userId}/role`, { role })
-    return { user: response.data.user || response.data, source: 'backend' }
+    return { user: normalizeUser(response.data.user || response.data), source: 'backend' }
   } catch (error) {
+    if (!shouldUseLocalFallback(error)) throw new Error(apiErrorMessage(error, 'Gagal mengubah role user.'))
     console.warn('Backend user role unavailable. Updating local user.', error)
     const users = ensureLocalUsers().map((user) => (
       user.id === userId ? { ...user, role } : user
     ))
     writeJson(LOCAL_USERS_KEY, users)
-    return { user: publicUser(users.find((user) => user.id === userId)), source: 'local-demo' }
+    return { user: normalizeUser(publicUser(users.find((user) => user.id === userId))), source: 'local-demo' }
   }
 }
 
 export async function getMaterials() {
   try {
     const response = await api.get('/api/materials')
-    return { data: response.data, source: 'backend' }
+    return { data: response.data.map(normalizeMaterial), source: 'backend' }
   } catch (error) {
     console.warn('Backend materials unavailable. Reading local materials.', error)
-    return { data: ensureLocalMaterials(), source: 'local-demo' }
+    return { data: ensureLocalMaterials().map(normalizeMaterial), source: 'local-demo' }
   }
 }
 
 export async function saveMaterial(payload) {
   try {
+    const backendPayload = {
+      title: payload.title,
+      topic: payload.topic || 'budgeting',
+      summary: payload.summary,
+      content: payload.content,
+      status: payload.status || 'published',
+    }
+    const body = formDataFromObject(backendPayload, { thumbnail: payload.thumbnailFile })
     const response = payload.id
-      ? await api.put(`/api/mentor/materials/${payload.id}`, payload)
-      : await api.post('/api/mentor/materials', payload)
-    return { data: response.data, source: 'backend' }
+      ? await api.patch(`/api/materials/${payload.id}`, body)
+      : await api.post('/api/materials', body)
+    return {
+      data: normalizeMaterial({
+        ...payload,
+        ...response.data,
+        mentor_name: currentUser()?.name,
+        status: backendPayload.status,
+      }),
+      source: 'backend',
+    }
   } catch (error) {
     console.warn('Backend material save unavailable. Saving local material.', error)
     const materials = ensureLocalMaterials()
+    const { thumbnailFile, ...localPayload } = payload
     const material = {
-      ...payload,
+      ...localPayload,
       id: payload.id || `material-${Date.now()}`,
       created_at: payload.created_at || new Date().toISOString(),
     }
@@ -290,22 +399,40 @@ export async function saveMaterial(payload) {
 export async function getChallenges() {
   try {
     const response = await api.get('/api/challenges')
-    return { data: response.data, source: 'backend' }
+    return { data: response.data.map(normalizeChallenge), source: 'backend' }
   } catch (error) {
     console.warn('Backend challenges unavailable. Reading local challenges.', error)
-    return { data: ensureLocalChallenges(), source: 'local-demo' }
+    return { data: ensureLocalChallenges().map(normalizeChallenge), source: 'local-demo' }
   }
 }
 
 export async function saveChallenge(payload) {
   try {
-    const response = await api.post('/api/mentor/challenges', payload)
-    return { data: response.data, source: 'backend' }
+    const backendPayload = {
+      title: payload.title,
+      description: payload.description,
+      due_at: payload.dueDate || payload.due_at || '',
+      status: payload.status || 'published',
+    }
+    const body = formDataFromObject(backendPayload, { attachment: payload.attachmentFile })
+    const response = payload.id
+      ? await api.patch(`/api/challenges/${payload.id}`, body)
+      : await api.post('/api/challenges', body)
+    return {
+      data: normalizeChallenge({
+        ...payload,
+        ...response.data,
+        mentor_name: currentUser()?.name,
+        status: backendPayload.status,
+      }),
+      source: 'backend',
+    }
   } catch (error) {
     console.warn('Backend challenge save unavailable. Saving local challenge.', error)
     const challenges = ensureLocalChallenges()
+    const { attachmentFile, ...localPayload } = payload
     const challenge = {
-      ...payload,
+      ...localPayload,
       id: `challenge-${Date.now()}`,
       created_at: new Date().toISOString(),
     }
@@ -317,8 +444,24 @@ export async function saveChallenge(payload) {
 
 export async function getSubmissions() {
   try {
-    const response = await api.get('/api/mentor/submissions')
-    return { data: response.data, source: 'backend' }
+    const user = currentUser()
+    if (user?.role === 'student') {
+      const response = await api.get('/api/submissions/mine')
+      return { data: response.data.map(normalizeSubmission), source: 'backend' }
+    }
+
+    const challengesResult = await getChallenges()
+    const submissionLists = await Promise.all(
+      challengesResult.data.map((challenge) =>
+        api.get(`/api/challenges/${challenge.id}/submissions`)
+          .then((response) => response.data.map((submission) => ({
+            ...submission,
+            challenge_title: challenge.title,
+          })))
+          .catch(() => []),
+      ),
+    )
+    return { data: submissionLists.flat().map(normalizeSubmission), source: 'backend' }
   } catch (error) {
     console.warn('Backend submissions unavailable. Reading local submissions.', error)
     return { data: readLocalSubmissions(), source: 'local-demo' }
@@ -327,13 +470,26 @@ export async function getSubmissions() {
 
 export async function submitChallenge(payload) {
   try {
-    const response = await api.post('/api/student/submissions', payload)
-    return { data: response.data, source: 'backend' }
+    const backendPayload = {
+      answer_text: payload.text || payload.answer_text,
+    }
+    const body = formDataFromObject(backendPayload, { attachment: payload.attachmentFile })
+    const response = await api.post(`/api/challenges/${payload.challengeId}/submissions`, body)
+    return {
+      data: normalizeSubmission({
+        ...payload,
+        ...response.data,
+        answer_text: backendPayload.answer_text,
+        status: 'submitted',
+      }),
+      source: 'backend',
+    }
   } catch (error) {
     console.warn('Backend submission unavailable. Saving local submission.', error)
     const submissions = readLocalSubmissions()
+    const { attachmentFile, ...localPayload } = payload
     const submission = {
-      ...payload,
+      ...localPayload,
       id: `submission-${Date.now()}`,
       status: 'submitted',
       feedback: '',
@@ -347,8 +503,19 @@ export async function submitChallenge(payload) {
 
 export async function saveSubmissionFeedback(submissionId, feedback) {
   try {
-    const response = await api.patch(`/api/mentor/submissions/${submissionId}/feedback`, { feedback })
-    return { data: response.data, source: 'backend' }
+    const response = await api.patch(`/api/submissions/${submissionId}/feedback`, {
+      feedback_text: feedback,
+      status: 'reviewed',
+    })
+    return {
+      data: normalizeSubmission({
+        ...response.data,
+        id: submissionId,
+        feedback_text: feedback,
+        status: 'reviewed',
+      }),
+      source: 'backend',
+    }
   } catch (error) {
     console.warn('Backend feedback unavailable. Saving local feedback.', error)
     const submissions = readLocalSubmissions().map((submission) => (

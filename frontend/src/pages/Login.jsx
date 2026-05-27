@@ -36,22 +36,22 @@ function Login() {
               Lanjutkan belajar sesuai peranmu.
             </h1>
             <p className="mt-5 max-w-2xl text-base font-medium leading-8 text-fin-text">
-              Student, mentor, dan admin masuk dari satu pintu. Setelah login, dashboard akan menyesuaikan role akun.
+              Student, mentor, dan superadmin masuk dari satu pintu. Setelah login, dashboard akan menyesuaikan role akun.
             </p>
           </div>
 
           <div className="grid gap-3 text-sm font-semibold text-fin-text sm:grid-cols-3">
             <div className="rounded-2xl border border-fin-line bg-fin-shell p-4">
-              <p className="font-extrabold text-fin-ink">Admin</p>
-              <p className="mt-1">admin@finlearn.id</p>
+              <p className="font-extrabold text-fin-ink">Superadmin</p>
+              <p className="mt-1">admin@finlearn.local</p>
             </div>
             <div className="rounded-2xl border border-fin-line bg-fin-shell p-4">
               <p className="font-extrabold text-fin-ink">Mentor</p>
-              <p className="mt-1">mentor@finlearn.id</p>
+              <p className="mt-1">mentor@finlearn.local</p>
             </div>
             <div className="rounded-2xl border border-fin-line bg-fin-shell p-4">
               <p className="font-extrabold text-fin-ink">Student</p>
-              <p className="mt-1">student@finlearn.id</p>
+              <p className="mt-1">student@finlearn.local</p>
             </div>
           </div>
         </div>

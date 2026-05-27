@@ -1,43 +1,68 @@
 import { createContext, useContext, useMemo, useState } from 'react'
 import { loginUser, registerUser } from '../services/api'
 
-const SESSION_KEY = 'finlearn-auth-user'
+const SESSION_KEY = 'finlearn-auth-session'
+const LEGACY_USER_KEY = 'finlearn-auth-user'
 const AuthContext = createContext(null)
 
-function readSessionUser() {
+function readSession() {
   try {
-    return JSON.parse(localStorage.getItem(SESSION_KEY))
+    const session = JSON.parse(localStorage.getItem(SESSION_KEY))
+    if (session?.user) return session
+
+    const legacyUser = JSON.parse(localStorage.getItem(LEGACY_USER_KEY))
+    if (legacyUser) return { user: legacyUser, token: null, source: 'legacy-local' }
+    return null
   } catch {
     return null
   }
 }
 
 function getDashboardPath(role) {
-  if (role === 'admin') return '/admin/dashboard'
+  if (role === 'superadmin') return '/admin/dashboard'
   if (role === 'mentor') return '/mentor/dashboard'
   return '/student/dashboard'
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(readSessionUser)
-  const [authSource, setAuthSource] = useState('')
+  const [session, setSession] = useState(readSession)
+  const user = session?.user || null
+  const [authSource, setAuthSource] = useState(session?.source || '')
 
   async function login(credentials) {
     const result = await loginUser(credentials)
-    localStorage.setItem(SESSION_KEY, JSON.stringify(result.user))
-    setUser(result.user)
+    const nextSession = {
+      user: result.user,
+      token: result.token || null,
+      source: result.source,
+    }
+    localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession))
+    localStorage.removeItem(LEGACY_USER_KEY)
+    setSession(nextSession)
     setAuthSource(result.source)
     return result.user
   }
 
   async function register(payload) {
     const result = await registerUser(payload)
+    if (result.token && result.user?.status === 'approved') {
+      const nextSession = {
+        user: result.user,
+        token: result.token,
+        source: result.source,
+      }
+      localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession))
+      localStorage.removeItem(LEGACY_USER_KEY)
+      setSession(nextSession)
+      setAuthSource(result.source)
+    }
     return result.user
   }
 
   function logout() {
     localStorage.removeItem(SESSION_KEY)
-    setUser(null)
+    localStorage.removeItem(LEGACY_USER_KEY)
+    setSession(null)
     setAuthSource('')
   }
 

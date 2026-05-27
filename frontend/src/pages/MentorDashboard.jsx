@@ -5,9 +5,12 @@ import { getChallenges, getMaterials, getSubmissions, saveChallenge, saveMateria
 const emptyMaterial = {
   id: '',
   title: '',
+  topic: 'budgeting',
   summary: '',
   content: '',
   thumbnail: '',
+  thumbnailFile: null,
+  status: 'published',
 }
 
 function MentorDashboard() {
@@ -16,7 +19,7 @@ function MentorDashboard() {
   const [challenges, setChallenges] = useState([])
   const [submissions, setSubmissions] = useState([])
   const [materialForm, setMaterialForm] = useState(emptyMaterial)
-  const [challengeForm, setChallengeForm] = useState({ title: '', description: '', dueDate: '' })
+  const [challengeForm, setChallengeForm] = useState({ title: '', description: '', dueDate: '', attachmentFile: null, status: 'published' })
   const [feedbackDrafts, setFeedbackDrafts] = useState({})
   const [status, setStatus] = useState('')
 
@@ -57,7 +60,7 @@ function MentorDashboard() {
       mentorName: user.name,
     })
     setChallenges((current) => [result.data, ...current])
-    setChallengeForm({ title: '', description: '', dueDate: '' })
+    setChallengeForm({ title: '', description: '', dueDate: '', attachmentFile: null, status: 'published' })
     setStatus('Challenge berhasil dibuat.')
   }
 
@@ -65,8 +68,12 @@ function MentorDashboard() {
     const feedback = feedbackDrafts[submissionId]?.trim()
     if (!feedback) return
 
-    const result = await saveSubmissionFeedback(submissionId, feedback)
-    setSubmissions((current) => current.map((item) => (item.id === submissionId ? result.data : item)))
+    await saveSubmissionFeedback(submissionId, feedback)
+    setSubmissions((current) => current.map((item) => (
+      item.id === submissionId
+        ? { ...item, feedback, feedback_text: feedback, status: 'reviewed', reviewed_at: new Date().toISOString() }
+        : item
+    )))
     setFeedbackDrafts((current) => ({ ...current, [submissionId]: '' }))
     setStatus('Feedback berhasil dikirim.')
   }
@@ -115,6 +122,19 @@ function MentorDashboard() {
                 />
               </label>
               <label className="block">
+                <span className="text-sm font-extrabold uppercase tracking-[0.14em] text-fin-text">Topik</span>
+                <select
+                  value={materialForm.topic}
+                  onChange={(event) => setMaterialForm((current) => ({ ...current, topic: event.target.value }))}
+                  className="mt-3 w-full rounded-xl border border-fin-line bg-fin-shell px-4 py-3 text-sm font-semibold text-fin-ink outline-none focus:border-fin-forest focus:ring-2 focus:ring-fin-sage"
+                >
+                  <option value="budgeting">Budgeting</option>
+                  <option value="inflasi">Inflasi</option>
+                  <option value="compound-interest">Compound Interest</option>
+                  <option value="aset-digital">Aset Digital</option>
+                </select>
+              </label>
+              <label className="block">
                 <span className="text-sm font-extrabold uppercase tracking-[0.14em] text-fin-text">Ringkasan</span>
                 <textarea
                   value={materialForm.summary}
@@ -138,7 +158,11 @@ function MentorDashboard() {
                 <span className="text-sm font-extrabold uppercase tracking-[0.14em] text-fin-text">Thumbnail atau gambar</span>
                 <input
                   type="file"
-                  onChange={(event) => setMaterialForm((current) => ({ ...current, thumbnail: event.target.files?.[0]?.name || '' }))}
+                  accept="image/png,image/jpeg,image/gif,image/webp,application/pdf"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] || null
+                    setMaterialForm((current) => ({ ...current, thumbnailFile: file, thumbnail: file?.name || current.thumbnail || '' }))
+                  }}
                   className="mt-3 w-full rounded-xl border border-fin-line bg-fin-shell px-4 py-3 text-sm font-semibold text-fin-text file:mr-4 file:rounded-lg file:border-0 file:bg-fin-forest file:px-4 file:py-2 file:font-bold file:text-white"
                 />
                 {materialForm.thumbnail && <span className="mt-2 block text-xs font-bold text-fin-muted">{materialForm.thumbnail}</span>}
@@ -187,6 +211,16 @@ function MentorDashboard() {
                   onChange={(event) => setChallengeForm((current) => ({ ...current, dueDate: event.target.value }))}
                   className="mt-3 w-full rounded-xl border border-fin-line bg-fin-shell px-4 py-3 text-sm font-semibold text-fin-ink outline-none focus:border-fin-forest focus:ring-2 focus:ring-fin-sage"
                 />
+              </label>
+              <label className="block">
+                <span className="text-sm font-extrabold uppercase tracking-[0.14em] text-fin-text">File pendukung</span>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/gif,image/webp,application/pdf"
+                  onChange={(event) => setChallengeForm((current) => ({ ...current, attachmentFile: event.target.files?.[0] || null }))}
+                  className="mt-3 w-full rounded-xl border border-fin-line bg-fin-shell px-4 py-3 text-sm font-semibold text-fin-text file:mr-4 file:rounded-lg file:border-0 file:bg-fin-forest file:px-4 file:py-2 file:font-bold file:text-white"
+                />
+                {challengeForm.attachmentFile && <span className="mt-2 block text-xs font-bold text-fin-muted">{challengeForm.attachmentFile.name}</span>}
               </label>
               <button type="submit" className="rounded-xl bg-fin-forest px-6 py-3 text-sm font-extrabold text-white shadow-lift hover:bg-fin-forestDark">
                 Buat Challenge

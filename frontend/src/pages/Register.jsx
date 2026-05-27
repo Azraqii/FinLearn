@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { getDashboardPath, useAuth } from '../context/AuthContext'
 
 function Register() {
   const navigate = useNavigate()
@@ -20,8 +20,8 @@ function Register() {
     setError('')
 
     try {
-      await register(form)
-      navigate('/pending-approval', { replace: true })
+      const user = await register(form)
+      navigate(user.status === 'approved' ? getDashboardPath(user.role) : '/pending-approval', { replace: true })
     } catch (err) {
       setError(err.message || 'Registrasi gagal. Coba lagi.')
     } finally {
